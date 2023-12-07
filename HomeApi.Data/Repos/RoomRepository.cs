@@ -1,6 +1,8 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using HomeApi.Data.Models;
+using HomeApi.Data.Queries;
 using Microsoft.EntityFrameworkCore;
 
 namespace HomeApi.Data.Repos
@@ -24,7 +26,11 @@ namespace HomeApi.Data.Repos
         {
             return await _context.Rooms.Where(r => r.Name == name).FirstOrDefaultAsync();
         }
-        
+        public async Task<Room> GetRoomById(Guid Id)
+        {
+            return await _context.Rooms.Where(r => r.Id == Id).FirstOrDefaultAsync();
+        }
+
         /// <summary>
         ///  Добавить новую комнату
         /// </summary>
@@ -34,6 +40,44 @@ namespace HomeApi.Data.Repos
             if (entry.State == EntityState.Detached)
                 await _context.Rooms.AddAsync(room);
             
+            await _context.SaveChangesAsync();
+        }
+
+        /// Получение списка комнат
+        public async Task<Room[]> GetRooms()
+        {
+            return await _context.Rooms
+                .ToArrayAsync();
+        }
+
+        /// <summary>
+        /// Обновить информацию о комнате
+        /// </summary>
+        public async Task UpdateRoom(Room room, UpdateRoomQuery query)
+        {
+            var existedRoom = await _context.Rooms.Where(r => r.Id == room.Id).FirstOrDefaultAsync();
+
+            if (existedRoom == null)
+            {
+                Console.WriteLine(room.Id + "NO");
+                return;
+            }
+
+            existedRoom.Name = query.NewName;
+            existedRoom.Area = query.NewArea;
+            existedRoom.GasConnected = query.NewGasConnected;
+            existedRoom.Voltage = query.NewVoltage;
+
+            // Добавляем в базу 
+            var entry = _context.Entry(existedRoom);
+            if (entry.State == EntityState.Detached)
+                _context.Rooms.Update(existedRoom);
+
+            await _context.SaveChangesAsync();
+        }
+        public async Task DeleteRoom(Room room)
+        {
+            _context.Rooms.Remove(room);
             await _context.SaveChangesAsync();
         }
     }
